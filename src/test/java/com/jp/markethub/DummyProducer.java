@@ -1,0 +1,56 @@
+package com.jp.markethub;
+
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class DummyProducer {
+    private final Logger logger = Logger.getInstance();
+    private final int port;
+    private ServerSocket serverSocket;
+    private Socket clientSocket;
+    private ExecutorService executor = Executors.newSingleThreadExecutor();
+    private volatile boolean running = true;
+
+    public DummyProducer(int port) {
+        this.port = port;
+    }
+
+    public void start() throws IOException {
+        serverSocket = new ServerSocket(port);
+        executor.execute(() -> {
+            try {
+                logger.debug(DummyProducer.class, "Dummy producer started on port " + port);
+                clientSocket = serverSocket.accept();
+                logger.debug(DummyProducer.class, "Accepted MarketHub connection");
+            } catch (IOException e) {
+                if (running) logger.error(DummyProducer.class, "Accept failed: " + e.getMessage());
+            }
+        });
+    }
+
+    public void publish(String data) {
+        if (clientSocket != null && clientSocket.isConnected()) {
+            try {
+                clientSocket.getOutputStream().write(data.getBytes());
+                clientSocket.getOutputStream().flush();
+                logger.debug(DummyProducer.class, "Published data: " + data);
+            } catch (IOException e) {
+                logger.error(DummyProducer.class, "Write failed: " + e.getMessage());
+            }
+        }
+    }
+
+    public void stop() {
+        running = false;
+        executor.shutdownNow();
+        try {
+            if (serverSocket != null) serverSocket.close();
+            if (clientSocket != null) clientSocket.close();
+        } catch (IOException e) {
+            logger.error(DummyProducer.class, "Stop failed: " + e.getMessage());
+        }
+    }
+}
