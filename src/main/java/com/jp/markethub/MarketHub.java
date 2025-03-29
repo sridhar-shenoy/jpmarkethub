@@ -116,6 +116,7 @@ public class MarketHub {
     }
 
     public void stop() {
+        logger.info(MarketHub.class, "Stopping MarketHub App");
         running = false;
         if (executor != null) {
             executor.shutdown(); // Graceful shutdown
@@ -142,6 +143,8 @@ public class MarketHub {
     private void closeAllResources() {
         // Close all consumer channels
         consumers.keySet().forEach(this::closeClientChannel);
+
+        consumers.values().forEach(AbstractConsumer::stop);
 
         // Close all producer connections
         producers.values().forEach(Producer::disconnect);

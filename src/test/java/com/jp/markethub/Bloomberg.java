@@ -6,7 +6,7 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class DummyProducer {
+public class Bloomberg {
     private final Logger logger = Logger.getInstance();
     private final int port;
     private ServerSocket serverSocket;
@@ -14,7 +14,7 @@ public class DummyProducer {
     private ExecutorService executor = Executors.newSingleThreadExecutor();
     private volatile boolean running = true;
 
-    public DummyProducer(int port) {
+    public Bloomberg(int port) {
         this.port = port;
     }
 
@@ -22,11 +22,11 @@ public class DummyProducer {
         serverSocket = new ServerSocket(port);
         executor.execute(() -> {
             try {
-                logger.debug(DummyProducer.class, "Dummy producer started on port " + port);
+                logger.debug(Bloomberg.class, "Dummy producer started on port " + port);
                 clientSocket = serverSocket.accept();
-                logger.debug(DummyProducer.class, "Accepted MarketHub connection");
+                logger.debug(Bloomberg.class, "Accepted MarketHub connection");
             } catch (IOException e) {
-                if (running) logger.error(DummyProducer.class, "Accept failed: " + e.getMessage());
+                if (running) logger.error(Bloomberg.class, "Accept failed: " + e.getMessage());
             }
         });
     }
@@ -36,9 +36,9 @@ public class DummyProducer {
             try {
                 clientSocket.getOutputStream().write(data.getBytes());
                 clientSocket.getOutputStream().flush();
-                logger.debug(DummyProducer.class, "Published data: " + data);
+                logger.debug(Bloomberg.class, "Published data: " + data);
             } catch (IOException e) {
-                logger.error(DummyProducer.class, "Write failed: " + e.getMessage());
+                logger.error(Bloomberg.class, "Write failed: " + e.getMessage());
             }
         }
     }
@@ -50,7 +50,7 @@ public class DummyProducer {
             if (serverSocket != null) serverSocket.close();
             if (clientSocket != null) clientSocket.close();
         } catch (IOException e) {
-            logger.error(DummyProducer.class, "Stop failed: " + e.getMessage());
+            logger.error(Bloomberg.class, "Stop failed: " + e.getMessage());
         }
     }
 }

@@ -43,7 +43,7 @@ public abstract class AbstractConsumer implements Runnable {
 
                 Sequencer sequencer = producer.getSequencer();
                 long currentSeq = sequencer.get();
-                long lastSeq = lastSequences.getOrDefault(type, -1L);
+                long lastSeq = lastSequences.getOrDefault(type, 0l);
 
                 if (currentSeq <= lastSeq) continue;
 
@@ -70,7 +70,6 @@ public abstract class AbstractConsumer implements Runnable {
 
                 lastSequences.put(type, currentSeq);
             }
-            sleepSafely();
         }
     }
 
@@ -109,14 +108,6 @@ public abstract class AbstractConsumer implements Runnable {
         }
     }
 
-    private void sleepSafely() {
-        try {
-            Thread.sleep(10);
-        } catch (InterruptedException e) {
-            running = false;
-            Thread.currentThread().interrupt();
-        }
-    }
 
     public void stop() {
         running = false;
