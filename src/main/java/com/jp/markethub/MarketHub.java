@@ -2,7 +2,6 @@ package com.jp.markethub;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.Iterator;
 import java.util.Map;
@@ -159,7 +158,8 @@ public class MarketHub {
         logger.info(MarketHub.class, "MarketHub stopped");
     }
 
-    public int getConsumerCount() { return consumers.size(); }
-    public int getProducerCount() { return producers.size(); }
+    public int getConsumerCount() {
+        return consumers.size();
+    }
     public Producer getProducer(ProducerType type) { return producers.get(type); }
 }

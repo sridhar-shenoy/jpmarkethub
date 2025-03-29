@@ -6,39 +6,44 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.concurrent.*;
 
-public class DummyConsumer implements AutoCloseable {
+public class JpInternalConsumer implements AutoCloseable {
     private static final Logger logger = Logger.getInstance();
     private final BlockingQueue<String> receivedMessages = new LinkedBlockingDeque<>();
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private final Socket socket;
+    private Socket socket;
+    private final int port;
     private final String appName;
     private volatile boolean running = true;
+    private final CountDownLatch connectionEstablishedLatch = new CountDownLatch(1); // New latch
+
 
     private final CountDownLatch messageReceivedLatch = new CountDownLatch(1);
 
-    public DummyConsumer(int port, String appName) throws IOException {
-        this.socket = new Socket("localhost", port);
+    public JpInternalConsumer(int port, String appName) {
+        this.port = port;
         this.appName = appName;
-        startListening();
     }
 
-    private void startListening() {
+    public void connectToMarketHubAndListen() throws IOException {
+        this.socket = new Socket("localhost", port);
+        connectionEstablishedLatch.countDown(); // Signal connection success
+
         executor.execute(() -> {
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(socket.getInputStream()))) {
 
-                logger.debug(DummyConsumer.class, "Starting to listen for messages for [ " + appName + " ]");
+                logger.debug(JpInternalConsumer.class, "Starting to listen for messages for [ " + appName + " ]");
                 while (running && !socket.isClosed()) {
                     String message = reader.readLine();
                     if (message != null) {
                         receivedMessages.add(message);
-                        messageReceivedLatch.countDown(); // Signal message received
-                        logger.debug(DummyConsumer.class, "Received message: " + message + " for [ " + appName + " ]");
+                        messageReceivedLatch.countDown();
+                        logger.debug(JpInternalConsumer.class, "Received message: " + message + " for [ " + appName + " ]");
                     }
                 }
             } catch (IOException e) {
                 if (running) {
-                    logger.error(DummyConsumer.class, "Read error: " + e.getMessage());
+                    logger.error(JpInternalConsumer.class, "Read error: " + e.getMessage());
                 }
             }
         });
@@ -47,6 +52,10 @@ public class DummyConsumer implements AutoCloseable {
     public void awaitFirstMessage(long timeout, TimeUnit unit)
             throws InterruptedException {
         messageReceivedLatch.await(timeout, unit);
+    }
+
+    public boolean awaitConnectionToMarketHub(long timeout, TimeUnit unit) throws InterruptedException {
+        return connectionEstablishedLatch.await(timeout, unit);
     }
 
     public String getNextMessage(long timeout, TimeUnit unit) 
@@ -64,7 +73,7 @@ public class DummyConsumer implements AutoCloseable {
                 socket.close();
             }
         } catch (IOException e) {
-            logger.error(DummyConsumer.class, "Close error: " + e.getMessage());
+            logger.error(JpInternalConsumer.class, "Close error: " + e.getMessage());
         }
     }
 
