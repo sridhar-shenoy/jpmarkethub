@@ -30,15 +30,10 @@ public class PerformanceProfiler {
     }
 
     private void start() throws IOException, InterruptedException, TimeoutException {
-        int count = 20000;
+        int count = 10000;
+        Runtime.getRuntime().gc();
         for (int i = 1; i < 10; i++) {
-
-            if(i == 3){
-                Runtime.getRuntime().gc();
-                System.out.println("run GC ");
-            }
-            int timeout = 11 - i;
-            System.out.println("PERF-- Iteration [ " + i + " ] count = [" + count + " ] timeout [ " + timeout + " ] ");
+            System.out.println("PERF-- Iteration [ " + i + " ] count = [" + count + " ] ");
             iteration(count);
         }
     }
@@ -70,9 +65,6 @@ public class PerformanceProfiler {
 
             waitTillTrueWithException(() -> jpStride.getTotalCount() > count - 1, 15, TimeUnit.SECONDS, false);
             System.out.println("PERF -- DIFF[ " + (count - jpStride.getTotalCount()) + " ] latency [ " + Math.min(getElapsed() - (t2-t1),0) + " ms ] timeToPublishData [ " + (t2 - t1) + " ms ] ");
-
-            long after = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-            System.out.println("Used =[ " + (after - before) / (1024 * 1024 ) + " MB ]");
         }
 
         consumers.forEach(JpInternalConsumer::close);
