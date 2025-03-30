@@ -166,7 +166,7 @@ public class MarketHub {
         }
         running = false;
         if (executor != null) {
-            executor.shutdown(); // Graceful shutdown
+            executor.shutdown();
             try {
                 if (!executor.awaitTermination(500, TimeUnit.MILLISECONDS)) {
                     executor.shutdownNow();

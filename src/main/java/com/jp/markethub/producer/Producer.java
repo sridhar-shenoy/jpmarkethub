@@ -16,13 +16,13 @@ public class Producer {
     private SocketChannel channel;
 
     private final int port;
-    private final int[] lengths; // Tracks valid data length for each slot
+    private final int[] lengths;
     private final byte[][] ringBuffer;
     private final int bufferSize;
     private final ProducerType type;
     private final Sequencer sequencer = new Sequencer();
 
-    private byte[] accumulatedData = new byte[0]; // Accumulates data across reads
+    private byte[] accumulatedData = new byte[0];
     private long firstDataTime = -1;
 
     public Producer(ProducerType type, int port, MarketHubConfig config) {

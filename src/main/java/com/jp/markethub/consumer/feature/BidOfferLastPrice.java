@@ -99,7 +99,7 @@ public class BidOfferLastPrice implements FeatureContract {
     private void buildOutputMessage() {
         outputBuffer.clear();
 
-        // Write sequence number
+
         writeSequence(sequence++);
 
         outputBuffer.put((byte) ',');

@@ -10,10 +10,10 @@ public class TestUtils {
         long endTime = System.nanoTime() + unit.toNanos(timeout);
         while (System.nanoTime() < endTime) {
             if (condition.getAsBoolean()) {
-                return; // Condition met
+                return;
             }
             try {
-                Thread.sleep(100); // Polling interval (adjust as needed)
+                Thread.sleep(100);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 if (needException) {
