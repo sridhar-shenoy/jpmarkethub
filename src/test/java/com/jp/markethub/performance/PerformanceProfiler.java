@@ -128,13 +128,11 @@ public class PerformanceProfiler {
 
             //-- Start Mock Bloomberg Feed
             bidOfferFeed = new Bloomberg(9000);
-            lastPriceFeed = new Bloomberg(9001);
             bidOfferFeed.start();
-            lastPriceFeed.start();
 
             //-- Connect MarketHub to Mock Bloomberg
             hub.connectToProducer(ProducerType.BIDOFFER, 9000);
-            hub.connectToProducer(ProducerType.LASTPRICE, 9001);
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

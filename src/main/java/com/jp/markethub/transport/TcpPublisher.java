@@ -8,16 +8,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public class TcpPublisher implements TransportContract {
 
     private final Logger logger = Logger.getInstance();
     protected final MarketHub hub;
     private final int port;
-    protected final List<SocketChannel> clients = new CopyOnWriteArrayList<>();
-    private volatile boolean running = true;
 
 
     public TcpPublisher(MarketHub hub, int port) {
@@ -52,8 +48,9 @@ public class TcpPublisher implements TransportContract {
         }
     }
 
-    public int getTotalClients() {
-        return clients.size();
+    @Override
+    public Integer getPort() {
+        return port;
     }
 
     private void closeClient(SocketChannel client) {
@@ -65,18 +62,4 @@ public class TcpPublisher implements TransportContract {
     }
 
 
-    public void stop() {
-        running = false;
-        clients.forEach(this::closeClient);
-    }
-
-    public void addClient(SocketChannel client) {
-        clients.add(client);
-        logger.debug(getClass(), "New client connected [ " + client + " ]. Total clients: " + clients.size());
-    }
-
-    public void removeClient(SocketChannel channel) {
-        clients.remove(channel);
-        logger.debug(getClass(), "Client removed. Total clients: " + getTotalClients());
-    }
 }

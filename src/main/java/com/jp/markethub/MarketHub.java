@@ -18,8 +18,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class MarketHub {
-    private static MarketHub instance;
     private static final Logger logger = Logger.getInstance();
+
     private ExecutorService executor;
     private Selector selector;
     private final Map<ProducerType, Producer> producers = new ConcurrentHashMap<>();
@@ -30,19 +30,22 @@ public class MarketHub {
 
 
     public void startConsumer() throws IOException {
+        ConsumerFactory.initialize(this);
         logger.info(MarketHub.class, "Starting MarketHub server...");
         if (executor == null || executor.isShutdown()) {
             executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         }
-        ConsumerFactory.initialize(this);
         selector = Selector.open();
-
         // Start consumer servers for each exposed port
         for (Map.Entry<Integer, FeatureContract> entry : ConsumerFactory.getExposedPorts().entrySet()) {
             startConsumerServer(entry.getKey());
         }
 
-        executor.execute(this::runSelectorLoop);
+        submit(this::runSelectorLoop);
+    }
+
+    public void submit(Runnable runSelectorLoop) {
+        executor.execute(runSelectorLoop);
     }
 
     private void startConsumerServer(int port) throws IOException {
@@ -82,22 +85,21 @@ public class MarketHub {
         }
     }
 
-    private void handleAccept(SelectionKey key) throws IOException {
+    private void handleAccept(SelectionKey key) {
         ServerSocketChannel serverChannel = (ServerSocketChannel) key.channel();
         try {
             SocketChannel client = serverChannel.accept();
             client.configureBlocking(false);
 
+            //-- Identify the port then we can wire the connection to its associated feature
             int port = ((InetSocketAddress) serverChannel.getLocalAddress()).getPort();
+
+            //-- Every post is associated with a feature
             FeatureContract feature = ConsumerFactory.getConsumer(port);
 
-            consumerManagerMap.putIfAbsent(port, new ConsumerManager(this));
-            ConsumerManager consumerManager = consumerManagerMap.get(port);
-            consumerManager.addClient(client);
-            consumerManager.registerInterest(feature.getInterestList());
-            consumerManager.registerFeature(feature);
-            consumerManager.start();
-            consumers.put(client, feature);
+            //-- Wire the three
+            wireClientFeatureToPort(client, feature, port);
+
             if (logger.isDebugEnabled()) {
                 logger.debug(MarketHub.class, "New consumer connected: " + client.getRemoteAddress());
             }
@@ -106,6 +108,15 @@ public class MarketHub {
         }
     }
 
+    private void wireClientFeatureToPort(SocketChannel client, FeatureContract feature, int port) {
+        consumers.put(client, feature);
+        consumerManagerMap.putIfAbsent(port, new ConsumerManager(this));
+        ConsumerManager consumerManager = consumerManagerMap.get(port);
+        consumerManager.addClient(client);
+        consumerManager.registerInterest(feature.getInterestList());
+        consumerManager.registerFeature(feature);
+        consumerManager.start();
+    }
 
     private void closeClientChannel(SocketChannel channel) {
         try {
@@ -125,7 +136,9 @@ public class MarketHub {
         Producer producer = new Producer(type, port);
         producers.put(type, producer);
         producer.connect();
-        logger.info(MarketHub.class, "Connected to " + type + " producer on port " + port);
+        if(logger.isDebugEnabled()) {
+            logger.debug(MarketHub.class, "Connected to " + type + " producer on port " + port);
+        }
      }
 
     public void stop() {
@@ -157,7 +170,7 @@ public class MarketHub {
         // Close all consumer channels
         consumers.keySet().forEach(this::closeClientChannel);
 
-        consumers.keySet().forEach(port -> {
+        consumerManagerMap.keySet().forEach(port -> {
             ConsumerManager consumerManager = consumerManagerMap.get(port);
             try {
                 consumerManager.close();
@@ -178,6 +191,8 @@ public class MarketHub {
                 logger.error(MarketHub.class, "Error closing server channel: " + e.getMessage());
             }
         });
+
+        ConsumerFactory.reset();
         logger.info(MarketHub.class, "MarketHub stopped");
     }
 

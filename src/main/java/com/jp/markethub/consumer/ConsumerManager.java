@@ -111,13 +111,10 @@ public class ConsumerManager implements Runnable {
     public void start() {
         if (isThreadStarted.compareAndSet(false,true)) {
             logger.info(getClass(),"Clients = " + clients);
-            new Thread(this, feature.getClass().getSimpleName()).start();
+            marketHub.submit(this);
         }
     }
 
-    public MarketHub getMarketHub(){
-        return marketHub;
-    }
 
     public void close() throws IOException {
         for (SocketChannel client : clients) client.close();

@@ -1,6 +1,7 @@
 package com.jp.markethub.common;
 
 public class Sequencer {
+
     private volatile long sequence = 0;
 
     public long get() {
