@@ -54,18 +54,18 @@ SequenceNo,LastPrice;
 Currently All Internal Cosnumers can connect via TCP connection to port **10000** to subscribe to Collated Data
 1. The **BidAndOfferLastPrice** is Published wis published as below 
 ```
-SequenceNo,BidPrice,OfferPrice;
+SequenceNo,BidPrice,OfferPrice,LastPrice
 ```
 # Archetecture Design 
 
 ## MarketHub
 1. **Market Hub** is the main application that initiates connections to Multiple Market Data source
-  a. For Each of these Connection MarketHub assignes a ring Buffer dedicated to this Producer
-  b. As and when data arrives from this Producer, ring buffer is populated and current valid sequence updated
+  - For Each of these Connection MarketHub assignes a ring Buffer dedicated to this Producer
+  - As and when data arrives from this Producer, ring buffer is populated and current valid sequence updated
 2. Market Hub exposes multiple ports for any internal clients to connect
-   a. Whenever a client connects on a port, MarketHub attahes it to a **busy spin thread**
-   b. this Consumer class will always monitor the Ringbuffer via a volatile variable to process any new data
-   c. when there is data available, Consumer will collate the data and publish to all connected clients 
+   - Whenever a client connects on a port, MarketHub attahes it to a **busy spin thread**
+   - this Consumer class will always monitor the Ringbuffer via a volatile variable to process any new data
+   - when there is data available, Consumer will collate the data and publish to all connected clients 
 
 # Performance metrics 
 > [!NOTE]
