@@ -17,10 +17,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ConsumerManager implements Runnable {
     private final Logger logger = Logger.getInstance();
+
     private final MarketHub marketHub;
-    private EnumSet<ProducerType> interests;
     protected final List<SocketChannel> clients = new CopyOnWriteArrayList<>();
+
     private volatile boolean running = true;
+    private EnumSet<ProducerType> interests;
     private FeatureContract feature;
     private AtomicBoolean isThreadStarted = new AtomicBoolean(false);
 
@@ -34,7 +36,7 @@ public class ConsumerManager implements Runnable {
 
     @Override
     public void run() {
-        if(logger.isDebugEnabled()) {
+        if (logger.isDebugEnabled()) {
             logger.debug(getClass(), "Starting consumer thread " + this);
         }
         long[] lastSequence = new long[ProducerType.values().length];
@@ -59,7 +61,7 @@ public class ConsumerManager implements Runnable {
                 //-- Handle buffer wrap-around scenario
                 if (availableCount > bufferSize) {
                     long newStart = Math.max(0, currentSeq - bufferSize + 1);
-                    if(logger.isDebugEnabled()) {
+                    if (logger.isDebugEnabled()) {
                         logger.debug(getClass(), "Missed multiple data feeds, Jumping sequence bufferSize =[" + bufferSize + "] availableCount=[" + availableCount + "]" + newStart);
                     }
                     lastSeq = newStart - 1;
@@ -72,14 +74,14 @@ public class ConsumerManager implements Runnable {
 
                 //-- Update consumer handler
                 if (length > 0) {
-                    if(logger.isDebugEnabled()) {
+                    if (logger.isDebugEnabled()) {
                         logger.info(getClass(), "Consumer Manager sequence =[ " + lastSeq + "] for Producer = [ " + producer + "] index = [ " + index + " ] length =[ " + length + " ]  data =[ " + new String(data).trim() + " ] ");
                     }
                     feature.onUpdate(data, length, type);
                 }
 
                 //-- store the last sequence
-                lastSequence[type.getSequenceId()] = lastSeq+1;
+                lastSequence[type.getSequenceId()] = lastSeq + 1;
             }
         }
     }
@@ -87,15 +89,14 @@ public class ConsumerManager implements Runnable {
 
     public void addClient(SocketChannel client) {
         clients.add(client);
-        if(logger.isDebugEnabled()) {
+        if (logger.isDebugEnabled()) {
             logger.debug(getClass(), "New client connected [ " + client + " ]. Total clients: " + clients.size());
         }
-
     }
 
     public void removeClient(SocketChannel channel) {
         clients.remove(channel);
-        if(logger.isDebugEnabled()) {
+        if (logger.isDebugEnabled()) {
             logger.debug(getClass(), "Client removed. Total clients: " + getTotalClients());
         }
     }
@@ -109,15 +110,20 @@ public class ConsumerManager implements Runnable {
     }
 
     public void start() {
-        if (isThreadStarted.compareAndSet(false,true)) {
-            logger.info(getClass(),"Clients = " + clients);
+        if (isThreadStarted.compareAndSet(false, true)) {
+            logger.info(getClass(), "Clients = " + clients);
             marketHub.submit(this);
         }
     }
 
-
-    public void close() throws IOException {
-        for (SocketChannel client : clients) client.close();
+    public void close() {
+        for (SocketChannel client : clients) {
+            try {
+                client.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     public Iterator<SocketChannel> getClients() {

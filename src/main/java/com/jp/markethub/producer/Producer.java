@@ -11,22 +11,25 @@ import java.util.Arrays;
 
 public class Producer {
     private final Logger logger = Logger.getInstance();
-    private final int port;
-    private final ProducerType type;
+
     private SocketChannel channel;
-    private final byte[][] ringBuffer;
+
+    private final int port;
     private final int[] lengths; // Tracks valid data length for each slot
+    private final byte[][] ringBuffer;
+    private final int bufferSize = (int) Math.pow(2, 14);
+    private final ProducerType type;
     private final Sequencer sequencer = new Sequencer();
-    private final int bufferSize = (int) Math.pow(2,14);
+
     private byte[] accumulatedData = new byte[0]; // Accumulates data across reads
     private long firstDataTime = -1;
 
     public Producer(ProducerType type, int port) {
         this.type = type;
         this.port = port;
-        validateBufferSize(bufferSize);
         this.ringBuffer = new byte[bufferSize][256];
         this.lengths = new int[bufferSize];
+        validateBufferSize(bufferSize);
     }
 
     private void validateBufferSize(int size) {
@@ -55,22 +58,22 @@ public class Producer {
                 channel.close();
             }
         } catch (IOException e) {
-            Logger.getInstance().error(Producer.class, "Disconnect error: " + e.getMessage());
+            logger.error(Producer.class, "Disconnect error: " + e.getMessage());
         }
     }
 
     private void readData() {
-        if(logger.isDebugEnabled()) {
+        if (logger.isDebugEnabled()) {
             logger.debug(Producer.class, "Starting data read loop for " + type + " producer");
         }
         int mask = bufferSize - 1;
-        ByteBuffer tempBuffer = ByteBuffer.allocate(1024); // Temporary read buffer
+        ByteBuffer tempBuffer = ByteBuffer.allocate((int) Math.pow(2,10));
         try {
             while (channel.isOpen() && !Thread.interrupted()) {
                 tempBuffer.clear();
                 int bytesRead = channel.read(tempBuffer);
                 if (bytesRead > 0) {
-                    if(firstDataTime == -1 ){
+                    if (firstDataTime == -1) {
                         firstDataTime = System.currentTimeMillis();
                     }
                     tempBuffer.flip();
@@ -85,34 +88,31 @@ public class Producer {
 
                     int start = 0;
                     for (int i = 0; i < accumulatedData.length; i++) {
-                        if (accumulatedData[i] == ';') { // Split on newline delimiter
+                        if (accumulatedData[i] == ';') {
                             int messageLength = i - start;
                             if (messageLength > 0) {
-                                // Copy the message into the ring buffer slot
                                 int nextSlot = (int) (sequencer.get() & mask);
                                 byte[] slot = ringBuffer[nextSlot];
                                 int copyLength = Math.min(messageLength, slot.length);
                                 System.arraycopy(accumulatedData, start, slot, 0, copyLength);
                                 lengths[nextSlot] = copyLength;
                                 sequencer.increment();
-                                if(logger.isDebugEnabled()) {
+                                if (logger.isDebugEnabled()) {
                                     logger.debug(Producer.class, type + " sequence updated to: " + sequencer.get());
                                 }
                             }
-                            start = i + 1; // Move past the delimiter
+                            start = i + 1;
                         }
                     }
 
-                    // Keep remaining data for next read
                     if (start < accumulatedData.length) {
                         accumulatedData = Arrays.copyOfRange(accumulatedData, start, accumulatedData.length);
                     } else {
                         accumulatedData = new byte[0];
                     }
                 } else if (bytesRead == -1) {
-                    break; // End of stream
+                    break;
                 }
-                Thread.yield(); // Avoid busy-waiting
             }
         } catch (IOException e) {
             logger.error(Producer.class, "Connection error with " + type + " producer: " + e.getMessage());
@@ -135,7 +135,7 @@ public class Producer {
         accumulatedData = new byte[0];
     }
 
-    public long getFirstDataTime(){
+    public long getFirstDataTime() {
         return firstDataTime;
     }
 }

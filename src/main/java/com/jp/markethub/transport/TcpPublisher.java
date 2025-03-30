@@ -33,7 +33,7 @@ public class TcpPublisher implements TransportContract {
         while (iterator.hasNext()) {
             SocketChannel client = iterator.next();
             try {
-                buffer.rewind(); // Reset buffer position for each client
+                buffer.rewind();
                 while (buffer.hasRemaining()) {
                     client.write(buffer);
                     if(logger.isDebugEnabled()) {

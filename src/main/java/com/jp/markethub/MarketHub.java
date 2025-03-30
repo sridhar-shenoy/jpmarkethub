@@ -30,13 +30,16 @@ public class MarketHub {
 
 
     public void startConsumer() throws IOException {
-        ConsumerFactory.initialize(this);
         logger.info(MarketHub.class, "Starting MarketHub server...");
+        ConsumerFactory.initialize(this);
+
         if (executor == null || executor.isShutdown()) {
             executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         }
+
         selector = Selector.open();
-        // Start consumer servers for each exposed port
+
+        //-- Start consumer servers for each publicly exposed port
         for (Map.Entry<Integer, FeatureContract> entry : ConsumerFactory.getExposedPorts().entrySet()) {
             startConsumerServer(entry.getKey());
         }
@@ -91,10 +94,10 @@ public class MarketHub {
             SocketChannel client = serverChannel.accept();
             client.configureBlocking(false);
 
-            //-- Identify the port then we can wire the connection to its associated feature
+            //-- Identify the port, and then we can wire the connection to its associated feature
             int port = ((InetSocketAddress) serverChannel.getLocalAddress()).getPort();
 
-            //-- Every post is associated with a feature
+            //-- Every port is associated with a feature
             FeatureContract feature = ConsumerFactory.getConsumer(port);
 
             //-- Wire the three
@@ -132,15 +135,17 @@ public class MarketHub {
         }
     }
 
+    //-- This must be invoked externally via Autosys or other job
     public void connectToProducer(ProducerType type, int port) throws IOException {
         Producer producer = new Producer(type, port);
         producers.put(type, producer);
         producer.connect();
-        if(logger.isDebugEnabled()) {
+        if (logger.isDebugEnabled()) {
             logger.debug(MarketHub.class, "Connected to " + type + " producer on port " + port);
         }
-     }
+    }
 
+    // -- Stop the hub
     public void stop() {
         logger.info(MarketHub.class, "Stopping MarketHub App");
         running = false;
@@ -166,45 +171,25 @@ public class MarketHub {
         }
     }
 
-    private void closeAllResources() {
-        // Close all consumer channels
+    private void closeAllResources() throws IOException {
         consumers.keySet().forEach(this::closeClientChannel);
-
         consumerManagerMap.keySet().forEach(port -> {
             ConsumerManager consumerManager = consumerManagerMap.get(port);
-            try {
-                consumerManager.close();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            consumerManager.close();
         });
-
-
-        // Close all producer connections
         producers.values().forEach(Producer::disconnect);
-
-        // Close server channels
-        consumerServers.values().forEach(server -> {
-            try {
-                server.close();
-            } catch (IOException e) {
-                logger.error(MarketHub.class, "Error closing server channel: " + e.getMessage());
-            }
-        });
-
+        for (ServerSocketChannel server : consumerServers.values()) {
+            server.close();
+        }
         ConsumerFactory.reset();
         logger.info(MarketHub.class, "MarketHub stopped");
-    }
-
-    public int getConsumerCount() {
-        return consumers.size();
     }
 
     public Producer getProducer(ProducerType type) {
         return producers.get(type);
     }
 
-    public void reset() {
+    public void reset() throws IOException {
         closeAllResources();
         producers.values().forEach(Producer::reset);
         producers.clear();
@@ -216,7 +201,7 @@ public class MarketHub {
         return consumerManagerMap.get(port);
     }
 
-    public long getFirstDataTime(ProducerType type){
+    public long getFirstDataTime(ProducerType type) {
         return producers.get(type).getFirstDataTime();
     }
 }
