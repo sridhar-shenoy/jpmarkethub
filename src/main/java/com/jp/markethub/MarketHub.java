@@ -165,4 +165,12 @@ public class MarketHub {
         return consumers.size();
     }
     public Producer getProducer(ProducerType type) { return producers.get(type); }
+
+    public void reset() {
+        closeAllResources();
+        producers.values().forEach(Producer::reset);
+        producers.clear();
+        consumers.clear();
+        consumerServers.clear();
+    }
 }

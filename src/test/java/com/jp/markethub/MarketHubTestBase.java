@@ -51,7 +51,7 @@ public class MarketHubTestBase {
         hub.stop();
         bidOfferFeed.stop();
         lastPriceFeed.stop();
+        hub.reset();
         Thread.sleep(200);
     }
-
 }

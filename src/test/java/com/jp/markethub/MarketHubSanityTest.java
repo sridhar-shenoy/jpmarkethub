@@ -9,6 +9,7 @@ import java.util.concurrent.TimeoutException;
 
 import static com.jp.markethub.TestUtils.waitTillTrue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class MarketHubSanityTest extends MarketHubTestBase {
 
@@ -27,7 +28,7 @@ public class MarketHubSanityTest extends MarketHubTestBase {
             jpStride.awaitConnectionToMarketHub(1, TimeUnit.SECONDS);
 
             //-- Bloomberg now publishes data
-            bidOfferFeed.publish("1,103.0,104.0\n");
+            bidOfferFeed.publish("1,103.0,104.0;");
 
             //-- Verify that Client has the data
             jpStride.awaitFirstMessage(2, TimeUnit.SECONDS);
@@ -50,8 +51,8 @@ public class MarketHubSanityTest extends MarketHubTestBase {
             jpStride.awaitConnectionToMarketHub(1, TimeUnit.SECONDS);
 
             //-- Bloomberg now publishes data
-            bidOfferFeed.publish("1,103.0,104.0\n");
-            lastPriceFeed.publish("1,103.5\n");
+            bidOfferFeed.publish("1,103.0,104.0;");
+            lastPriceFeed.publish("1,103.5;");
 
             //-- Verify initial bid/offer
             jpStride.awaitFirstMessage(1, TimeUnit.SECONDS);
@@ -65,7 +66,7 @@ public class MarketHubSanityTest extends MarketHubTestBase {
             bidOfferFeed.stop();
 
             //-- Send new last price
-            lastPriceFeed.publish("2,104.0\n");
+            lastPriceFeed.publish("2,104.0;");
 
             //-- Verify final update with last Known BidOffer and lastPrice
             waitTillTrue(() -> jpStride.allMessageCount() > 0, 500, TimeUnit.SECONDS);
@@ -87,8 +88,8 @@ public class MarketHubSanityTest extends MarketHubTestBase {
             consumers.addAll(Arrays.asList(jpStride, jpAlgo, jpPrimeServices));
             waitTillAllConsumerAreConnected();
 
-            bidOfferFeed.publish("1,103.0,104.0\n");
-            lastPriceFeed.publish("1,103.5\n");
+            bidOfferFeed.publish("1,103.0,104.0;");
+            lastPriceFeed.publish("1,103.5;");
 
             for (JpInternalConsumer consumer : consumers) {
                 consumer.awaitFirstMessage(2, TimeUnit.SECONDS);
@@ -103,9 +104,9 @@ public class MarketHubSanityTest extends MarketHubTestBase {
 
     @Test
     public void testBidAndOfferPublishedBeforeClientsConnect() throws Exception {
-        bidOfferFeed.publish("1,103.0,104.0\n");
-        bidOfferFeed.publish("2,104.0,105.0\n");
-        bidOfferFeed.publish("3,105.0,106.0\n");
+        bidOfferFeed.publish("1,103.0,104.0;");
+        bidOfferFeed.publish("2,104.0,105.0;");
+        bidOfferFeed.publish("3,105.0,106.0;");
 
         try (
                 JpInternalConsumer jpStride = new JpInternalConsumer(BID_OFFER_LAST_PRICE_INTERNAL_PORT, JP_STRIDE);
@@ -116,16 +117,18 @@ public class MarketHubSanityTest extends MarketHubTestBase {
             waitTillAllConsumerAreConnected();
 
 
-            for (JpInternalConsumer consumer : consumers) {
-                consumer.awaitFirstMessage(2, TimeUnit.SECONDS);
-                assertEquals("0,103.0,104.0,", consumer.getNextMessage(2, TimeUnit.SECONDS));
+            jpStride.awaitFirstMessage(2, TimeUnit.SECONDS);
+            assertEquals("0,103.0,104.0,", jpStride.getNextMessage(2, TimeUnit.SECONDS));
 
-                waitTillTrue(()->consumer.allMessageCount()>0,200, TimeUnit.SECONDS);
-                assertEquals("1,104.0,105.0,", consumer.getNextMessage(2, TimeUnit.SECONDS));
+            waitTillTrue(() -> jpStride.allMessageCount() > 0, 200, TimeUnit.SECONDS);
+            assertEquals("1,104.0,105.0,", jpStride.getNextMessage(2, TimeUnit.SECONDS));
 
-                waitTillTrue(()->consumer.allMessageCount()>0,2, TimeUnit.SECONDS);
-                assertEquals("2,105.0,106.0,", consumer.getNextMessage(2, TimeUnit.SECONDS));
-            }
+            waitTillTrue(() -> jpStride.allMessageCount() > 0, 2, TimeUnit.SECONDS);
+            assertEquals("2,105.0,106.0,", jpStride.getNextMessage(2, TimeUnit.SECONDS));
+
+            /*
+                2nd and 3rd client may only get updates from the time of connection
+             */
         }
     }
 
