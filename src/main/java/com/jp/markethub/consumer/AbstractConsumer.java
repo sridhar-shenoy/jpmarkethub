@@ -1,4 +1,10 @@
-package com.jp.markethub;
+package com.jp.markethub.consumer;
+
+import com.jp.markethub.log.Logger;
+import com.jp.markethub.MarketHub;
+import com.jp.markethub.common.Sequencer;
+import com.jp.markethub.producer.Producer;
+import com.jp.markethub.producer.ProducerType;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -6,8 +12,6 @@ import java.nio.channels.SocketChannel;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public abstract class AbstractConsumer implements Runnable {

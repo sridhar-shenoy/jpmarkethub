@@ -1,5 +1,6 @@
 package com.jp.markethub;
 
+import com.jp.markethub.mock.JpInternalConsumer;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -7,7 +8,7 @@ import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static com.jp.markethub.TestUtils.waitTillTrue;
+import static com.jp.markethub.util.TestUtils.waitTillTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 

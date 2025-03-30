@@ -1,4 +1,6 @@
-package com.jp.markethub;
+package com.jp.markethub.mock;
+
+import com.jp.markethub.log.Logger;
 
 import java.io.IOException;
 import java.net.ServerSocket;

@@ -1,4 +1,4 @@
-package com.jp.markethub;
+package com.jp.markethub.util;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;

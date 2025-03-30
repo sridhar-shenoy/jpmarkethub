@@ -1,4 +1,6 @@
-package com.jp.markethub;
+package com.jp.markethub.consumer;
+
+import com.jp.markethub.MarketHub;
 
 import java.util.HashMap;
 import java.util.Map;

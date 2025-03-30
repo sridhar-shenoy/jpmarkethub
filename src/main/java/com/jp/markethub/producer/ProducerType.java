@@ -1,4 +1,4 @@
-package com.jp.markethub;
+package com.jp.markethub.producer;
 
 public enum ProducerType {
     BIDOFFER(0),

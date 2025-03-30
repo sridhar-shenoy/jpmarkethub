@@ -1,4 +1,7 @@
-package com.jp.markethub;
+package com.jp.markethub.consumer;
+
+import com.jp.markethub.MarketHub;
+import com.jp.markethub.producer.ProducerType;
 
 import java.util.Arrays;
 import java.util.EnumSet;

@@ -1,4 +1,7 @@
-package com.jp.markethub;
+package com.jp.markethub.producer;
+
+import com.jp.markethub.log.Logger;
+import com.jp.markethub.common.Sequencer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

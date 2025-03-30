@@ -1,4 +1,4 @@
-package com.jp.markethub;
+package com.jp.markethub.log;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

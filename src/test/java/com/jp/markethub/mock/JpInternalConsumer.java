@@ -1,4 +1,6 @@
-package com.jp.markethub;
+package com.jp.markethub.mock;
+
+import com.jp.markethub.log.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
