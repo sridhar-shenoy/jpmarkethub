@@ -111,6 +111,12 @@ PERF -- DIFF[ 0 ] latency [ 0 ms ] timeToPublishData [ 11078 ms ]
 PERF -- DIFF[ 0 ] latency [ 0 ms ] timeToPublishData [ 11010 ms ] 
 PERF -- DIFF[ 0 ] latency [ 0 ms ] timeToPublishData [ 11017 ms ] 
 ```
+##  📌 TDD Based Developement .
+> [!NOTE]
+> Have written enough specification to get a functional working model
+> Have made sure the majority of the critica path is covered 
+
+![image](https://github.com/user-attachments/assets/77cc6d0a-6547-4c12-819f-3845a35ed863)
 
 
 
