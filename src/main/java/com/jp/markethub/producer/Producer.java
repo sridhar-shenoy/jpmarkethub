@@ -17,7 +17,7 @@ public class Producer {
     private final byte[][] ringBuffer;
     private final int[] lengths; // Tracks valid data length for each slot
     private final Sequencer sequencer = new Sequencer();
-    private final int bufferSize = 4096;
+    private final int bufferSize = (int) Math.pow(2,14);
     private byte[] accumulatedData = new byte[0]; // Accumulates data across reads
 
     public Producer(ProducerType type, int port) {

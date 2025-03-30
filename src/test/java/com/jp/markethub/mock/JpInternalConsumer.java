@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class JpInternalConsumer implements AutoCloseable {
     private static final Logger logger = Logger.getInstance();
@@ -17,6 +18,7 @@ public class JpInternalConsumer implements AutoCloseable {
     private final String appName;
     private volatile boolean running = true;
     private final CountDownLatch connectionEstablishedLatch = new CountDownLatch(1); // New latch
+    private final AtomicLong count = new AtomicLong(0);
 
 
     private final CountDownLatch messageReceivedLatch = new CountDownLatch(1);
@@ -40,6 +42,7 @@ public class JpInternalConsumer implements AutoCloseable {
                     if (message != null) {
                         receivedMessages.add(message);
                         messageReceivedLatch.countDown();
+                        count.incrementAndGet();
                         logger.debug(JpInternalConsumer.class, "Received message: " + message + " for [ " + appName + " ]");
                     }
                 }
@@ -63,6 +66,10 @@ public class JpInternalConsumer implements AutoCloseable {
     public String getNextMessage(long timeout, TimeUnit unit) 
         throws InterruptedException {
         return receivedMessages.poll(timeout, unit);
+    }
+
+    public long getTotalCount(){
+        return count.get();
     }
 
 
