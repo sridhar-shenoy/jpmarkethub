@@ -132,13 +132,4 @@ public class MarketHubSpecificationTest extends MarketHubTestBase {
     }
 
 
-    private void waitTillAllConsumerAreConnected() throws TimeoutException, IOException, InterruptedException {
-        for (JpInternalConsumer consumer : consumers) {
-            consumer.connectToMarketHubAndListen();
-            if (!consumer.awaitConnectionToMarketHub(1, TimeUnit.SECONDS)) {
-                throw new TimeoutException("Connection to MarketHub failed");
-            }
-            System.out.println("All Clients Connected");
-        }
-    }
 }
