@@ -34,41 +34,45 @@ public abstract class AbstractConsumer implements Runnable {
 
     public void run() {
         logger.debug(getClass(), "Starting consumer thread");
-        Map<ProducerType, Long> lastSequences = new ConcurrentHashMap<>();
+         long[] lastSequence = new long[ProducerType.values().length];
 
         while (running) {
             for (ProducerType type : interests) {
                 Producer producer = hub.getProducer(type);
                 if (producer == null) continue;
 
+                //-- Collect the current and available Producer Sequence
                 Sequencer sequencer = producer.getSequencer();
                 long currentSeq = sequencer.get();
-                long lastSeq = lastSequences.getOrDefault(type, 0l);
+                long lastSeq = lastSequence[type.getSequenceId()];
 
+                //-- If no data is available go to next producer
                 if (currentSeq <= lastSeq) continue;
 
-                int bufferSize = producer.getBufferSize();
+                //-- If  there is data check the lag
+                long bufferSize = producer.getBufferSize();
                 long availableCount = currentSeq - lastSeq;
 
-                // Handle buffer wrap-around scenario
+                //-- Handle buffer wrap-around scenario
                 if (availableCount > bufferSize) {
                     long newStart = Math.max(0, currentSeq - bufferSize + 1);
-                    logger.info(getClass(), "Buffer overflow detected. Jumping to sequence " + newStart);
+                    logger.info(getClass(), "Missed multiple data feeds, Jumping sequence bufferSize =[" + bufferSize + "] availableCount=[" + availableCount + "]" + newStart);
                     lastSeq = newStart - 1;
                 }
 
-                // Process all pending sequences
-                for (long seq = lastSeq ; seq <= currentSeq; seq++) {
-                    int index = (int) (seq & (bufferSize - 1)); // Fast modulo for power-of-two sizes
-                    byte[] data = producer.getData(index);
-                    int length = producer.getDataLength(seq);
+                //-- Pick the data without any lock
+                long index = (int) (lastSeq & (bufferSize - 1));
+                byte[] data = producer.getData(index);
+                int length = producer.getDataLength(index);
 
-                    if (length > 0) {
-                        onUpdate(data, length, type);
-                    }
+                //-- Update consumer handler
+                if (length > 0) {
+                    logger.info(getClass(),"data=" + new String(data));
+                    onUpdate(data, length, type);
                 }
 
-                lastSequences.put(type, currentSeq);
+                //-- store the last sequence
+                lastSequence[type.getSequenceId()] = lastSeq+1;
             }
         }
     }

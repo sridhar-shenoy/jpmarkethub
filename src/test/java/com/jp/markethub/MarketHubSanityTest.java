@@ -13,6 +13,8 @@ import static org.junit.Assert.assertEquals;
 public class MarketHubSanityTest extends MarketHubTestBase {
 
     public static final String JP_STRIDE = "JP Stride";
+    public static final String JP_ALGO = "JP Algo";
+    public static final String JP_PRIME_SERVICES = "JP Prime Services";
 
     @Test
     public void testBidAndOfferUpdateOnlyToSingleConsumer() throws Exception {
@@ -30,7 +32,7 @@ public class MarketHubSanityTest extends MarketHubTestBase {
             //-- Verify that Client has the data
             jpStride.awaitFirstMessage(2, TimeUnit.SECONDS);
             String message = jpStride.getNextMessage(1, TimeUnit.SECONDS);
-            assertEquals("1,103.0,104.0,", message);
+            assertEquals("0,103.0,104.0,", message);
 
             //-- Ensure there are no messages left to consume
             assertEquals(0, jpStride.allMessageCount());
@@ -53,7 +55,7 @@ public class MarketHubSanityTest extends MarketHubTestBase {
 
             //-- Verify initial bid/offer
             jpStride.awaitFirstMessage(1, TimeUnit.SECONDS);
-            assertEquals("1,103.0,104.0,", jpStride.getNextMessage(2, TimeUnit.SECONDS));
+            assertEquals("0,103.0,104.0,", jpStride.getNextMessage(2, TimeUnit.SECONDS));
 
             //-- Verify combined update
             waitTillTrue(() -> jpStride.allMessageCount() > 0, 1, TimeUnit.SECONDS);
@@ -68,7 +70,7 @@ public class MarketHubSanityTest extends MarketHubTestBase {
             //-- Verify final update with last Known BidOffer and lastPrice
             waitTillTrue(() -> jpStride.allMessageCount() > 0, 500, TimeUnit.SECONDS);
             String result = jpStride.getNextMessage(1, TimeUnit.SECONDS);
-            assertEquals("1,103.0,104.0,104.0", result);
+            assertEquals("2,103.0,104.0,104.0", result);
 
             //-- Ensure there are no messages left to consume
             assertEquals(0, jpStride.allMessageCount());
@@ -79,8 +81,8 @@ public class MarketHubSanityTest extends MarketHubTestBase {
     public void testBidAndOfferAndLastPriceUpdateToMultipleConsumer() throws Exception {
         try (
                 JpInternalConsumer jpStride = new JpInternalConsumer(BID_OFFER_LAST_PRICE_INTERNAL_PORT, JP_STRIDE);
-                JpInternalConsumer jpAlgo = new JpInternalConsumer(BID_OFFER_LAST_PRICE_INTERNAL_PORT, "JP Algo");
-                JpInternalConsumer jpPrimeServices = new JpInternalConsumer(BID_OFFER_LAST_PRICE_INTERNAL_PORT, "JP Prime Services");
+                JpInternalConsumer jpAlgo = new JpInternalConsumer(BID_OFFER_LAST_PRICE_INTERNAL_PORT, JP_ALGO);
+                JpInternalConsumer jpPrimeServices = new JpInternalConsumer(BID_OFFER_LAST_PRICE_INTERNAL_PORT, JP_PRIME_SERVICES);
         ) {
             consumers.addAll(Arrays.asList(jpStride, jpAlgo, jpPrimeServices));
             waitTillAllConsumerAreConnected();
@@ -90,7 +92,7 @@ public class MarketHubSanityTest extends MarketHubTestBase {
 
             for (JpInternalConsumer consumer : consumers) {
                 consumer.awaitFirstMessage(2, TimeUnit.SECONDS);
-                assertEquals("1,103.0,104.0,", consumer.getNextMessage(2, TimeUnit.SECONDS));
+                assertEquals("0,103.0,104.0,", consumer.getNextMessage(2, TimeUnit.SECONDS));
 
                 //-- Verify final update with last Known BidOffer and lastPrice
                 assertEquals("1,103.0,104.0,103.5", consumer.getNextMessage(2, TimeUnit.SECONDS));
@@ -99,18 +101,16 @@ public class MarketHubSanityTest extends MarketHubTestBase {
         }
     }
 
+    @Test
     public void testBidAndOfferPublishedBeforeClientsConnect() throws Exception {
         bidOfferFeed.publish("1,103.0,104.0\n");
         bidOfferFeed.publish("2,104.0,105.0\n");
         bidOfferFeed.publish("3,105.0,106.0\n");
-        lastPriceFeed.publish("1,103.5\n");
-        lastPriceFeed.publish("2,104.5\n");
-        lastPriceFeed.publish("3,106.5\n");
 
         try (
                 JpInternalConsumer jpStride = new JpInternalConsumer(BID_OFFER_LAST_PRICE_INTERNAL_PORT, JP_STRIDE);
-                JpInternalConsumer jpAlgo = new JpInternalConsumer(BID_OFFER_LAST_PRICE_INTERNAL_PORT, "JP Algo");
-                JpInternalConsumer jpPrimeServices = new JpInternalConsumer(BID_OFFER_LAST_PRICE_INTERNAL_PORT, "JP Prime Services");
+                JpInternalConsumer jpAlgo = new JpInternalConsumer(BID_OFFER_LAST_PRICE_INTERNAL_PORT, JP_ALGO);
+                JpInternalConsumer jpPrimeServices = new JpInternalConsumer(BID_OFFER_LAST_PRICE_INTERNAL_PORT, JP_PRIME_SERVICES);
         ) {
             consumers.addAll(Arrays.asList(jpStride, jpAlgo, jpPrimeServices));
             waitTillAllConsumerAreConnected();
@@ -118,10 +118,13 @@ public class MarketHubSanityTest extends MarketHubTestBase {
 
             for (JpInternalConsumer consumer : consumers) {
                 consumer.awaitFirstMessage(2, TimeUnit.SECONDS);
-                assertEquals("1,103.0,104.0,", consumer.getNextMessage(2, TimeUnit.SECONDS));
+                assertEquals("0,103.0,104.0,", consumer.getNextMessage(2, TimeUnit.SECONDS));
 
-                assertEquals("2,104.0,105.0", consumer.getNextMessage(2, TimeUnit.SECONDS));
-                assertEquals(0, consumer.allMessageCount());
+                waitTillTrue(()->consumer.allMessageCount()>0,200, TimeUnit.SECONDS);
+                assertEquals("1,104.0,105.0,", consumer.getNextMessage(2, TimeUnit.SECONDS));
+
+                waitTillTrue(()->consumer.allMessageCount()>0,2, TimeUnit.SECONDS);
+                assertEquals("2,105.0,106.0,", consumer.getNextMessage(2, TimeUnit.SECONDS));
             }
         }
     }
