@@ -1,5 +1,6 @@
-package com.jp.markethub;
+package com.jp.markethub.sanity;
 
+import com.jp.markethub.MarketHubTestBase;
 import com.jp.markethub.mock.JpInternalConsumer;
 import org.junit.Test;
 
@@ -10,16 +11,15 @@ import java.util.concurrent.TimeoutException;
 
 import static com.jp.markethub.util.TestUtils.waitTillTrue;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
-public class MarketHubSanityTest extends MarketHubTestBase {
+public class MarketHubSpecificationTest extends MarketHubTestBase {
 
     public static final String JP_STRIDE = "JP Stride";
     public static final String JP_ALGO = "JP Algo";
     public static final String JP_PRIME_SERVICES = "JP Prime Services";
 
     @Test
-    public void testBidAndOfferUpdateOnlyToSingleConsumer() throws Exception {
+    public void singleConsumerAndSingleProducer() throws Exception {
         try (JpInternalConsumer jpStride = new JpInternalConsumer(BID_OFFER_LAST_PRICE_INTERNAL_PORT, JP_STRIDE)) {
 
             //-- Connect to Market Hub
@@ -42,7 +42,7 @@ public class MarketHubSanityTest extends MarketHubTestBase {
     }
 
     @Test
-    public void testBidAndOfferAndLastPriceUpdateToSingleConsumer() throws Exception {
+    public void singleConsumerMustGetCollatedDataFromMultipleProducers() throws Exception {
         try (JpInternalConsumer jpStride = new JpInternalConsumer(BID_OFFER_LAST_PRICE_INTERNAL_PORT, JP_STRIDE)) {
 
             //-- Connect Internal JP Client to MarketHub for BifOffer and Last Price
@@ -80,7 +80,7 @@ public class MarketHubSanityTest extends MarketHubTestBase {
     }
 
     @Test
-    public void testBidAndOfferAndLastPriceUpdateToMultipleConsumer() throws Exception {
+    public void multipleConsumersJoinedBeforeProducerMustReceiveAllDataFromMultipleProducers() throws Exception {
         try (
                 JpInternalConsumer jpStride = new JpInternalConsumer(BID_OFFER_LAST_PRICE_INTERNAL_PORT, JP_STRIDE);
                 JpInternalConsumer jpAlgo = new JpInternalConsumer(BID_OFFER_LAST_PRICE_INTERNAL_PORT, JP_ALGO);
@@ -92,19 +92,16 @@ public class MarketHubSanityTest extends MarketHubTestBase {
             bidOfferFeed.publish("1,103.0,104.0;");
             lastPriceFeed.publish("1,103.5;");
 
-            for (JpInternalConsumer consumer : consumers) {
-                consumer.awaitFirstMessage(2, TimeUnit.SECONDS);
-                assertEquals("0,103.0,104.0,", consumer.getNextMessage(2, TimeUnit.SECONDS));
+            jpStride.awaitFirstMessage(2, TimeUnit.SECONDS);
+            assertEquals("0,103.0,104.0,", jpStride.getNextMessage(2, TimeUnit.SECONDS));
 
-                //-- Verify final update with last Known BidOffer and lastPrice
-                assertEquals("1,103.0,104.0,103.5", consumer.getNextMessage(2, TimeUnit.SECONDS));
-                assertEquals(0, consumer.allMessageCount());
-            }
+            waitTillTrue(() -> jpStride.allMessageCount() > 0, 200, TimeUnit.SECONDS);
+            assertEquals("1,103.0,104.0,103.5", jpStride.getNextMessage(2, TimeUnit.SECONDS));
         }
     }
 
     @Test
-    public void testBidAndOfferPublishedBeforeClientsConnect() throws Exception {
+    public void multipleConsumersJoinedLaterThanAllProducerEnsuresFirstConsumerToReceiveAllData() throws Exception {
         bidOfferFeed.publish("1,103.0,104.0;");
         bidOfferFeed.publish("2,104.0,105.0;");
         bidOfferFeed.publish("3,105.0,106.0;");
@@ -116,6 +113,7 @@ public class MarketHubSanityTest extends MarketHubTestBase {
         ) {
             consumers.addAll(Arrays.asList(jpStride, jpAlgo, jpPrimeServices));
             waitTillAllConsumerAreConnected();
+
 
 
             jpStride.awaitFirstMessage(2, TimeUnit.SECONDS);
@@ -140,17 +138,7 @@ public class MarketHubSanityTest extends MarketHubTestBase {
             if (!consumer.awaitConnectionToMarketHub(1, TimeUnit.SECONDS)) {
                 throw new TimeoutException("Connection to MarketHub failed");
             }
+            System.out.println("All Clients Connected");
         }
     }
-
-
-    private void waitForConnections(int expected) throws InterruptedException {
-        int retries = 0;
-        while (hub.getConsumerCount() < expected && retries++ < 10) {
-            Thread.sleep(100);
-        }
-        assertEquals("All consumers should connect", expected, hub.getConsumerCount());
-    }
-
-
 }

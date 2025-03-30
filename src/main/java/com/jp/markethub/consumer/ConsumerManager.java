@@ -1,48 +1,45 @@
 package com.jp.markethub.consumer;
 
-import com.jp.markethub.log.Logger;
 import com.jp.markethub.MarketHub;
 import com.jp.markethub.common.Sequencer;
+import com.jp.markethub.consumer.feature.FeatureContract;
+import com.jp.markethub.log.Logger;
 import com.jp.markethub.producer.Producer;
 import com.jp.markethub.producer.ProducerType;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public abstract class AbstractConsumer implements Runnable {
+public class ConsumerManager implements Runnable {
     private final Logger logger = Logger.getInstance();
-    protected final MarketHub hub;
-    private final EnumSet<ProducerType> interests;
+    private final MarketHub marketHub;
+    private EnumSet<ProducerType> interests;
     protected final List<SocketChannel> clients = new CopyOnWriteArrayList<>();
     private volatile boolean running = true;
+    private FeatureContract feature;
+    private AtomicBoolean isThreadStarted = new AtomicBoolean(false);
 
-    public AbstractConsumer(MarketHub hub, EnumSet<ProducerType> interests) {
-        this.hub = hub;
+    public ConsumerManager(MarketHub marketHub) {
+        this.marketHub = marketHub;
+    }
+
+    public void registerInterest(EnumSet<ProducerType> interests) {
         this.interests = interests;
     }
 
-    public void addClient(SocketChannel client) {
-        clients.add(client);
-        logger.debug(getClass(), "New client connected [ " + client + " ]. Total clients: " + clients.size());
-    }
-
-    public void removeClient(SocketChannel channel) {
-        clients.remove(channel);
-        logger.debug(getClass(), "Client removed. Total clients: " + getTotalClients());
-    }
-
+    @Override
     public void run() {
-        logger.debug(getClass(), "Starting consumer thread");
-         long[] lastSequence = new long[ProducerType.values().length];
+        logger.debug(getClass(), "Starting consumer thread " + this);
+        long[] lastSequence = new long[ProducerType.values().length];
 
         while (running) {
             for (ProducerType type : interests) {
-                Producer producer = hub.getProducer(type);
+                Producer producer = marketHub.getProducer(type);
                 if (producer == null) continue;
 
                 //-- Collect the current and available Producer Sequence
@@ -71,8 +68,8 @@ public abstract class AbstractConsumer implements Runnable {
 
                 //-- Update consumer handler
                 if (length > 0) {
-                    logger.info(getClass(),"data=" + new String(data));
-                    onUpdate(data, length, type);
+                    logger.info(getClass(), "Consumer Manager sequence =[ " + lastSeq + "] for Producer = [ " + producer + "] index = [ " + index + " ] length =[ " + length + " ]  data =[ " + new String(data).trim() + " ] ");
+                    feature.onUpdate(data, length, type);
                 }
 
                 //-- store the last sequence
@@ -81,44 +78,42 @@ public abstract class AbstractConsumer implements Runnable {
         }
     }
 
+
+    public void addClient(SocketChannel client) {
+        clients.add(client);
+        logger.debug(getClass(), "New client connected [ " + client + " ]. Total clients: " + clients.size());
+
+    }
+
+    public void removeClient(SocketChannel channel) {
+        clients.remove(channel);
+        logger.debug(getClass(), "Client removed. Total clients: " + getTotalClients());
+    }
+
     public int getTotalClients() {
         return clients.size();
     }
 
-    abstract void onUpdate(byte[] data, int length, ProducerType type);
+    public void registerFeature(FeatureContract feature) {
+        this.feature = feature;
+    }
 
-    protected void publish(byte[] data, int length) {
-        logger.info(getClass(), "Published data " + new String(data));
-        ByteBuffer buffer = ByteBuffer.wrap(data, 0, length);
-        Iterator<SocketChannel> iterator = clients.iterator();
-
-        while (iterator.hasNext()) {
-            SocketChannel client = iterator.next();
-            try {
-                buffer.rewind(); // Reset buffer position for each client
-                while (buffer.hasRemaining()) {
-                    client.write(buffer);
-                    logger.info(getClass(), "Published to " + client.getRemoteAddress());
-                }
-            } catch (IOException e) {
-                logger.error(getClass(), "Failed to write to client: " + e.getMessage());
-                iterator.remove();
-                closeClient(client);
-            }
+    public void start() {
+        if (isThreadStarted.compareAndSet(false,true)) {
+            logger.info(getClass(),"Clients = " + clients);
+            new Thread(this, feature.getClass().getSimpleName()).start();
         }
     }
 
-    private void closeClient(SocketChannel client) {
-        try {
-            client.close();
-        } catch (IOException ex) {
-            logger.error(getClass(), "Error closing client: " + ex.getMessage());
-        }
+    public MarketHub getMarketHub(){
+        return marketHub;
     }
 
+    public void close() throws IOException {
+        for (SocketChannel client : clients) client.close();
+    }
 
-    public void stop() {
-        running = false;
-        clients.forEach(this::closeClient);
+    public Iterator<SocketChannel> getClients() {
+        return clients.iterator();
     }
 }

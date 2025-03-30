@@ -1,7 +1,8 @@
 package com.jp.markethub;
 
-import com.jp.markethub.consumer.AbstractConsumer;
+import com.jp.markethub.consumer.ConsumerManager;
 import com.jp.markethub.consumer.ConsumerFactory;
+import com.jp.markethub.consumer.feature.FeatureContract;
 import com.jp.markethub.log.Logger;
 import com.jp.markethub.producer.Producer;
 import com.jp.markethub.producer.ProducerType;
@@ -22,8 +23,9 @@ public class MarketHub {
     private ExecutorService executor;
     private Selector selector;
     private final Map<ProducerType, Producer> producers = new ConcurrentHashMap<>();
-    private final Map<SocketChannel, AbstractConsumer> consumers = new ConcurrentHashMap<>();
+    private final Map<SocketChannel, FeatureContract> consumers = new ConcurrentHashMap<>();
     private final Map<Integer, ServerSocketChannel> consumerServers = new ConcurrentHashMap<>();
+    private final Map<Integer, ConsumerManager> consumerManagerMap = new ConcurrentHashMap<>();
     private volatile boolean running = true;
 
 
@@ -36,7 +38,7 @@ public class MarketHub {
         selector = Selector.open();
 
         // Start consumer servers for each exposed port
-        for (Map.Entry<Integer, AbstractConsumer> entry : ConsumerFactory.getExposedPorts().entrySet()) {
+        for (Map.Entry<Integer, FeatureContract> entry : ConsumerFactory.getExposedPorts().entrySet()) {
             startConsumerServer(entry.getKey());
         }
 
@@ -88,13 +90,15 @@ public class MarketHub {
             client.configureBlocking(false);
 
             int port = ((InetSocketAddress) serverChannel.getLocalAddress()).getPort();
-            AbstractConsumer consumer = ConsumerFactory.getConsumer(port);
-            consumer.addClient(client);
-            consumers.put(client, consumer);
+            FeatureContract feature = ConsumerFactory.getConsumer(port);
 
-            if (consumer.getTotalClients() == 1) {
-                new Thread(consumer, "Consumer").start();
-            }
+            consumerManagerMap.putIfAbsent(port, new ConsumerManager(this));
+            ConsumerManager consumerManager = consumerManagerMap.get(port);
+            consumerManager.addClient(client);
+            consumerManager.registerInterest(feature.getInterestList());
+            consumerManager.registerFeature(feature);
+            consumerManager.start();
+            consumers.put(client, feature);
             logger.debug(MarketHub.class, "New consumer connected: " + client.getRemoteAddress());
         } catch (Exception e) {
             logger.error(MarketHub.class, e.getMessage());
@@ -104,9 +108,11 @@ public class MarketHub {
 
     private void closeClientChannel(SocketChannel channel) {
         try {
-            AbstractConsumer consumer = consumers.remove(channel);
+            FeatureContract consumer = consumers.remove(channel);
             if (consumer != null) {
-                consumer.removeClient(channel);
+                int port = ((InetSocketAddress) channel.getLocalAddress()).getPort();
+                ConsumerManager consumerManager = consumerManagerMap.get(port);
+                consumerManager.removeClient(channel);
             }
             channel.close();
         } catch (IOException e) {
@@ -150,7 +156,16 @@ public class MarketHub {
         // Close all consumer channels
         consumers.keySet().forEach(this::closeClientChannel);
 
-        consumers.values().forEach(AbstractConsumer::stop);
+        consumers.keySet().forEach(port -> {
+            ConsumerManager consumerManager = consumerManagerMap.get(port);
+            try {
+                consumerManager.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+
 
         // Close all producer connections
         producers.values().forEach(Producer::disconnect);
@@ -178,5 +193,9 @@ public class MarketHub {
         producers.clear();
         consumers.clear();
         consumerServers.clear();
+    }
+
+    public ConsumerManager getConsumerManagerForPort(int port) {
+        return consumerManagerMap.get(port);
     }
 }
