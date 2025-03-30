@@ -37,4 +37,8 @@ public class Logger {
         System.out.println(logLine);
         System.out.flush();
     }
+
+    public boolean isDebugEnabled() {
+        return false;
+    }
 }

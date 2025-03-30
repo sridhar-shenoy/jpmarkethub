@@ -24,9 +24,13 @@ public class Bloomberg {
         serverSocket = new ServerSocket(port);
         executor.execute(() -> {
             try {
-                logger.debug(Bloomberg.class, "Dummy producer started on port " + port);
+                if(logger.isDebugEnabled()) {
+                    logger.debug(Bloomberg.class, "Dummy producer started on port " + port);
+                }
                 clientSocket = serverSocket.accept();
-                logger.debug(Bloomberg.class, "Accepted MarketHub connection");
+                if(logger.isDebugEnabled()) {
+                    logger.debug(Bloomberg.class, "Accepted MarketHub connection");
+                }
             } catch (IOException e) {
                 if (running) logger.error(Bloomberg.class, "Accept failed: " + e.getMessage());
             }
@@ -38,7 +42,9 @@ public class Bloomberg {
             try {
                 clientSocket.getOutputStream().write(data.getBytes());
                 clientSocket.getOutputStream().flush();
-                logger.debug(Bloomberg.class, "Published data: " + data);
+                if(logger.isDebugEnabled()) {
+                    logger.debug(Bloomberg.class, "Published data: " + data);
+                }
             } catch (IOException e) {
                 logger.error(Bloomberg.class, "Write failed: " + e.getMessage());
             }

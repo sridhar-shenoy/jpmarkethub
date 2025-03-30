@@ -27,7 +27,9 @@ public class TcpPublisher implements TransportContract {
 
     @Override
     public void publish(byte[] data, int length) {
-        logger.info(getClass(), "Received data [ " + new String(data).trim() + " ] to publish");
+        if(logger.isDebugEnabled()) {
+            logger.debug(getClass(), "Received data [ " + new String(data).trim() + " ] to publish");
+        }
         ByteBuffer buffer = ByteBuffer.wrap(data, 0, length);
         ConsumerManager consumerManager = hub.getConsumerManagerForPort(port);
         if(consumerManager == null)return;
@@ -38,7 +40,9 @@ public class TcpPublisher implements TransportContract {
                 buffer.rewind(); // Reset buffer position for each client
                 while (buffer.hasRemaining()) {
                     client.write(buffer);
-                    logger.info(getClass(), "Published data [ " +  new String(data).trim() + "] to [ " + client.getRemoteAddress().toString().trim() +" ]");
+                    if(logger.isDebugEnabled()) {
+                        logger.debug(getClass(), "Published data [ " + new String(data).trim() + "] to [ " + client.getRemoteAddress().toString().trim() + " ]");
+                    }
                 }
             } catch (IOException e) {
                 logger.error(getClass(), "Failed to write to client: " + e.getMessage());

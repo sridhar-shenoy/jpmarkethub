@@ -5,18 +5,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
 
 public class TestUtils {
-    /**
-     * Waits until the condition is true or throws a TimeoutException.
-     * @param condition Condition to check
-     * @param timeout Maximum time to wait
-     * @param unit Time unit (e.g., TimeUnit.SECONDS)
-     * @throws TimeoutException If the condition isn't met within the timeout
-     */
-    public static void waitTillTrue(
-        BooleanSupplier condition, 
-        long timeout, 
-        TimeUnit unit
-    ) throws TimeoutException {
+
+    public static void waitTillTrueWithException(BooleanSupplier condition, long timeout, TimeUnit unit, boolean needException) throws TimeoutException {
         long endTime = System.nanoTime() + unit.toNanos(timeout);
         while (System.nanoTime() < endTime) {
             if (condition.getAsBoolean()) {
@@ -26,9 +16,18 @@ public class TestUtils {
                 Thread.sleep(100); // Polling interval (adjust as needed)
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new TimeoutException("Wait interrupted");
+                if (needException) {
+                    throw new TimeoutException("Wait interrupted");
+                }
             }
         }
-        throw new TimeoutException("Condition not met after " + timeout + " " + unit);
+        if (needException) {
+            throw new TimeoutException("Condition not met after " + timeout + " " + unit);
+        }
     }
+
+    public static void waitTillTrue(BooleanSupplier condition, long timeout, TimeUnit unit) throws TimeoutException {
+        waitTillTrueWithException(condition, timeout, unit, true);
+    }
+
 }

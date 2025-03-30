@@ -35,15 +35,18 @@ public class JpInternalConsumer implements AutoCloseable {
         executor.execute(() -> {
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(socket.getInputStream()))) {
-
-                logger.debug(JpInternalConsumer.class, "Starting to listen for messages for [ " + appName + " ]");
+                if(logger.isDebugEnabled()) {
+                    logger.debug(JpInternalConsumer.class, "Starting to listen for messages for [ " + appName + " ]");
+                }
                 while (running && !socket.isClosed()) {
                     String message = reader.readLine();
                     if (message != null) {
                         receivedMessages.add(message);
                         messageReceivedLatch.countDown();
                         count.incrementAndGet();
-                        logger.debug(JpInternalConsumer.class, "Received message: " + message + " for [ " + appName + " ]");
+                        if(logger.isDebugEnabled()) {
+                            logger.debug(JpInternalConsumer.class, "Received message: " + message + " for [ " + appName + " ]");
+                        }
                     }
                 }
             } catch (IOException e) {

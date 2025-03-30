@@ -19,6 +19,7 @@ public class Producer {
     private final Sequencer sequencer = new Sequencer();
     private final int bufferSize = (int) Math.pow(2,14);
     private byte[] accumulatedData = new byte[0]; // Accumulates data across reads
+    private long firstDataTime = -1;
 
     public Producer(ProducerType type, int port) {
         this.type = type;
@@ -59,15 +60,19 @@ public class Producer {
     }
 
     private void readData() {
-        logger.debug(Producer.class, "Starting data read loop for " + type + " producer");
+        if(logger.isDebugEnabled()) {
+            logger.debug(Producer.class, "Starting data read loop for " + type + " producer");
+        }
         int mask = bufferSize - 1;
         ByteBuffer tempBuffer = ByteBuffer.allocate(1024); // Temporary read buffer
-
         try {
             while (channel.isOpen() && !Thread.interrupted()) {
                 tempBuffer.clear();
                 int bytesRead = channel.read(tempBuffer);
                 if (bytesRead > 0) {
+                    if(firstDataTime == -1 ){
+                        firstDataTime = System.currentTimeMillis();
+                    }
                     tempBuffer.flip();
                     byte[] newData = new byte[tempBuffer.remaining()];
                     tempBuffer.get(newData);
@@ -90,7 +95,9 @@ public class Producer {
                                 System.arraycopy(accumulatedData, start, slot, 0, copyLength);
                                 lengths[nextSlot] = copyLength;
                                 sequencer.increment();
-                                logger.debug(Producer.class, type + " sequence updated to: " + sequencer.get());
+                                if(logger.isDebugEnabled()) {
+                                    logger.debug(Producer.class, type + " sequence updated to: " + sequencer.get());
+                                }
                             }
                             start = i + 1; // Move past the delimiter
                         }
@@ -126,5 +133,9 @@ public class Producer {
         Arrays.fill(lengths, 0);
         sequencer.set(0);
         accumulatedData = new byte[0];
+    }
+
+    public long getFirstDataTime(){
+        return firstDataTime;
     }
 }

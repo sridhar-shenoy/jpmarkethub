@@ -61,8 +61,7 @@ public class MarketHub {
                 selector.select();
                 processSelectedKeys();
             } catch (ClosedSelectorException e) {
-                logger.debug(MarketHub.class, "Selector closed normally");
-                break;
+                logger.error(MarketHub.class, "Selector closed normally");
             } catch (IOException e) {
                 logger.error(MarketHub.class, "Selector error: " + e.getMessage());
             }
@@ -99,7 +98,9 @@ public class MarketHub {
             consumerManager.registerFeature(feature);
             consumerManager.start();
             consumers.put(client, feature);
-            logger.debug(MarketHub.class, "New consumer connected: " + client.getRemoteAddress());
+            if (logger.isDebugEnabled()) {
+                logger.debug(MarketHub.class, "New consumer connected: " + client.getRemoteAddress());
+            }
         } catch (Exception e) {
             logger.error(MarketHub.class, e.getMessage());
         }
@@ -125,7 +126,7 @@ public class MarketHub {
         producers.put(type, producer);
         producer.connect();
         logger.info(MarketHub.class, "Connected to " + type + " producer on port " + port);
-    }
+     }
 
     public void stop() {
         logger.info(MarketHub.class, "Stopping MarketHub App");
@@ -166,7 +167,6 @@ public class MarketHub {
         });
 
 
-
         // Close all producer connections
         producers.values().forEach(Producer::disconnect);
 
@@ -178,14 +178,16 @@ public class MarketHub {
                 logger.error(MarketHub.class, "Error closing server channel: " + e.getMessage());
             }
         });
-
         logger.info(MarketHub.class, "MarketHub stopped");
     }
 
     public int getConsumerCount() {
         return consumers.size();
     }
-    public Producer getProducer(ProducerType type) { return producers.get(type); }
+
+    public Producer getProducer(ProducerType type) {
+        return producers.get(type);
+    }
 
     public void reset() {
         closeAllResources();
@@ -197,5 +199,9 @@ public class MarketHub {
 
     public ConsumerManager getConsumerManagerForPort(int port) {
         return consumerManagerMap.get(port);
+    }
+
+    public long getFirstDataTime(ProducerType type){
+        return producers.get(type).getFirstDataTime();
     }
 }

@@ -1,7 +1,6 @@
 package com.jp.markethub.consumer;
 
 import com.jp.markethub.MarketHub;
-import com.jp.markethub.consumer.feature.AbstractConsumer;
 import com.jp.markethub.consumer.feature.BidOfferLastPrice;
 import com.jp.markethub.consumer.feature.FeatureContract;
 import com.jp.markethub.transport.TcpPublisher;

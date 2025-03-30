@@ -34,7 +34,9 @@ public class ConsumerManager implements Runnable {
 
     @Override
     public void run() {
-        logger.debug(getClass(), "Starting consumer thread " + this);
+        if(logger.isDebugEnabled()) {
+            logger.debug(getClass(), "Starting consumer thread " + this);
+        }
         long[] lastSequence = new long[ProducerType.values().length];
 
         while (running) {
@@ -57,7 +59,9 @@ public class ConsumerManager implements Runnable {
                 //-- Handle buffer wrap-around scenario
                 if (availableCount > bufferSize) {
                     long newStart = Math.max(0, currentSeq - bufferSize + 1);
-                    logger.info(getClass(), "Missed multiple data feeds, Jumping sequence bufferSize =[" + bufferSize + "] availableCount=[" + availableCount + "]" + newStart);
+                    if(logger.isDebugEnabled()) {
+                        logger.debug(getClass(), "Missed multiple data feeds, Jumping sequence bufferSize =[" + bufferSize + "] availableCount=[" + availableCount + "]" + newStart);
+                    }
                     lastSeq = newStart - 1;
                 }
 
@@ -68,7 +72,9 @@ public class ConsumerManager implements Runnable {
 
                 //-- Update consumer handler
                 if (length > 0) {
-                    logger.info(getClass(), "Consumer Manager sequence =[ " + lastSeq + "] for Producer = [ " + producer + "] index = [ " + index + " ] length =[ " + length + " ]  data =[ " + new String(data).trim() + " ] ");
+                    if(logger.isDebugEnabled()) {
+                        logger.info(getClass(), "Consumer Manager sequence =[ " + lastSeq + "] for Producer = [ " + producer + "] index = [ " + index + " ] length =[ " + length + " ]  data =[ " + new String(data).trim() + " ] ");
+                    }
                     feature.onUpdate(data, length, type);
                 }
 
@@ -81,13 +87,17 @@ public class ConsumerManager implements Runnable {
 
     public void addClient(SocketChannel client) {
         clients.add(client);
-        logger.debug(getClass(), "New client connected [ " + client + " ]. Total clients: " + clients.size());
+        if(logger.isDebugEnabled()) {
+            logger.debug(getClass(), "New client connected [ " + client + " ]. Total clients: " + clients.size());
+        }
 
     }
 
     public void removeClient(SocketChannel channel) {
         clients.remove(channel);
-        logger.debug(getClass(), "Client removed. Total clients: " + getTotalClients());
+        if(logger.isDebugEnabled()) {
+            logger.debug(getClass(), "Client removed. Total clients: " + getTotalClients());
+        }
     }
 
     public int getTotalClients() {
