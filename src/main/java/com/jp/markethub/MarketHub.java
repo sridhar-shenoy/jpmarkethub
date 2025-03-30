@@ -37,7 +37,10 @@ public class MarketHub {
     }
 
     public void startConsumer() throws IOException {
-        logger.info(MarketHub.class, "Starting MarketHub server...");
+
+        if (logger.isDebugEnabled()) {
+            logger.debug(MarketHub.class, "Starting MarketHub server...");
+        }
         ConsumerFactory.initialize(this);
 
         if (executor == null || executor.isShutdown()) {
@@ -65,7 +68,9 @@ public class MarketHub {
 
         serverChannel.register(selector, SelectionKey.OP_ACCEPT);
         consumerServers.put(port, serverChannel);
-        logger.info(MarketHub.class, "Listening on consumer port " + port);
+        if(logger.isDebugEnabled()) {
+            logger.debug(MarketHub.class, "Listening on consumer port " + port);
+        }
     }
 
     private void runSelectorLoop() {
@@ -74,7 +79,9 @@ public class MarketHub {
                 selector.select();
                 processSelectedKeys();
             } catch (ClosedSelectorException e) {
-                logger.error(MarketHub.class, "Selector closed normally");
+                if (logger.isDebugEnabled()) { //TODO remove this after performance test
+                    logger.error(MarketHub.class, "Selector closed normally");
+                }
             } catch (IOException e) {
                 logger.error(MarketHub.class, "Selector error: " + e.getMessage());
             }
@@ -144,7 +151,7 @@ public class MarketHub {
 
     //-- This must be invoked externally via Autosys or other job
     public void connectToProducer(ProducerType type, int port) throws IOException {
-        Producer producer = new Producer(type, port,config);
+        Producer producer = new Producer(type, port, config);
         producers.put(type, producer);
         producer.connect();
         if (logger.isDebugEnabled()) {
@@ -154,7 +161,9 @@ public class MarketHub {
 
     // -- Stop the hub
     public void stop() {
-        logger.info(MarketHub.class, "Stopping MarketHub App");
+        if(logger.isDebugEnabled()) {
+            logger.debug(MarketHub.class, "Stopping MarketHub App");
+        }
         running = false;
         if (executor != null) {
             executor.shutdown(); // Graceful shutdown
@@ -189,7 +198,9 @@ public class MarketHub {
             server.close();
         }
         ConsumerFactory.reset();
-        logger.info(MarketHub.class, "MarketHub stopped");
+        if(logger.isDebugEnabled()) {
+            logger.debug(MarketHub.class, "MarketHub stopped");
+        }
     }
 
     public Producer getProducer(ProducerType type) {

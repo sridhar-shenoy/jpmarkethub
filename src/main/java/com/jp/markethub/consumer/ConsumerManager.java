@@ -111,7 +111,9 @@ public class ConsumerManager implements Runnable {
 
     public void start() {
         if (isThreadStarted.compareAndSet(false, true)) {
-            logger.info(getClass(), "Clients = " + clients);
+            if (logger.isDebugEnabled()) {
+                logger.info(getClass(), "Clients = " + clients);
+            }
             marketHub.submit(this);
         }
     }
