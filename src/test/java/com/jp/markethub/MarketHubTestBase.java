@@ -1,5 +1,6 @@
 package com.jp.markethub;
 
+import com.jp.markethub.config.MarketHubConfig;
 import com.jp.markethub.mock.Bloomberg;
 import com.jp.markethub.mock.JpInternalConsumer;
 import com.jp.markethub.producer.ProducerType;
@@ -31,7 +32,7 @@ public class MarketHubTestBase {
 
     protected void startMarketHub() {
         //-- Initialize MarketHub
-        hub = new MarketHub();
+        hub = new MarketHub(new MarketHubConfig());
         try {
             hub.startConsumer();
 

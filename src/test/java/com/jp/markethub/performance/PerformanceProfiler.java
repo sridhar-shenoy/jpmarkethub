@@ -1,6 +1,7 @@
 package com.jp.markethub.performance;
 
 import com.jp.markethub.MarketHub;
+import com.jp.markethub.config.MarketHubConfig;
 import com.jp.markethub.mock.Bloomberg;
 import com.jp.markethub.mock.JpInternalConsumer;
 import com.jp.markethub.producer.ProducerType;
@@ -122,7 +123,7 @@ public class PerformanceProfiler {
 
     protected void startMarketHub() {
         //-- Initialize MarketHub
-        hub = new MarketHub();
+        hub = new MarketHub( new MarketHubConfig());
         try {
             hub.startConsumer();
 
@@ -137,5 +138,4 @@ public class PerformanceProfiler {
             throw new RuntimeException(e);
         }
     }
-
 }

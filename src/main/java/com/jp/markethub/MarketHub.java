@@ -1,5 +1,6 @@
 package com.jp.markethub;
 
+import com.jp.markethub.config.MarketHubConfig;
 import com.jp.markethub.consumer.ConsumerManager;
 import com.jp.markethub.consumer.ConsumerFactory;
 import com.jp.markethub.consumer.feature.FeatureContract;
@@ -19,15 +20,21 @@ import java.util.concurrent.TimeUnit;
 
 public class MarketHub {
     private static final Logger logger = Logger.getInstance();
+    private final MarketHubConfig config;
+
 
     private ExecutorService executor;
     private Selector selector;
+
     private final Map<ProducerType, Producer> producers = new ConcurrentHashMap<>();
     private final Map<SocketChannel, FeatureContract> consumers = new ConcurrentHashMap<>();
     private final Map<Integer, ServerSocketChannel> consumerServers = new ConcurrentHashMap<>();
     private final Map<Integer, ConsumerManager> consumerManagerMap = new ConcurrentHashMap<>();
     private volatile boolean running = true;
 
+    public MarketHub(MarketHubConfig config) {
+        this.config = config;
+    }
 
     public void startConsumer() throws IOException {
         logger.info(MarketHub.class, "Starting MarketHub server...");
@@ -137,7 +144,7 @@ public class MarketHub {
 
     //-- This must be invoked externally via Autosys or other job
     public void connectToProducer(ProducerType type, int port) throws IOException {
-        Producer producer = new Producer(type, port);
+        Producer producer = new Producer(type, port,config);
         producers.put(type, producer);
         producer.connect();
         if (logger.isDebugEnabled()) {

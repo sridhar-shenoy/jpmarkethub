@@ -1,5 +1,6 @@
 package com.jp.markethub.producer;
 
+import com.jp.markethub.config.MarketHubConfig;
 import com.jp.markethub.log.Logger;
 import com.jp.markethub.common.Sequencer;
 
@@ -17,16 +18,17 @@ public class Producer {
     private final int port;
     private final int[] lengths; // Tracks valid data length for each slot
     private final byte[][] ringBuffer;
-    private final int bufferSize = (int) Math.pow(2, 14);
+    private final int bufferSize;
     private final ProducerType type;
     private final Sequencer sequencer = new Sequencer();
 
     private byte[] accumulatedData = new byte[0]; // Accumulates data across reads
     private long firstDataTime = -1;
 
-    public Producer(ProducerType type, int port) {
+    public Producer(ProducerType type, int port, MarketHubConfig config) {
         this.type = type;
         this.port = port;
+        this.bufferSize =  config.getBufferSize();
         this.ringBuffer = new byte[bufferSize][256];
         this.lengths = new int[bufferSize];
         validateBufferSize(bufferSize);
